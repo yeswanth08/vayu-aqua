@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@theme { --color-midnight:#050d1f; --color-navy:#0a1a3a; --color-aqua:#19b5e8; --color-cyan:#22e0ff; --color-ice:#eaf6fc; --font-display:"Sora",sans-serif; --font-sans:"Inter",sans-serif; }
+html{scroll-behavior:smooth} body{font-family:var(--font-sans);background:#050d1f;overflow-x:hidden}
+section{scroll-margin-top:4rem}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
