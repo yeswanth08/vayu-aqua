@@ -71,7 +71,7 @@ export function Contact({ c }: { c: Customization }) {
     if (!/^[6-9]\d{9}$/.test(f.phone.replace(/[\s-]/g, ''))) er.phone = 'Enter a valid 10-digit mobile number.'
     if (!(+f.qty > 0)) er.qty = 'Enter an approximate quantity.'
     setErr(er); if (Object.keys(er).length) return
-    openWhatsApp(`Hello VAYU AQUA, I'm ${f.name} (${f.phone}).\nService: ${f.service}\nBottle size: ${f.size}\nQuantity: ~${f.qty}\n${f.message ? `Message: ${f.message}` : ''}`)
+    openWhatsApp(`🙏 *Namaskaram Vayu Aqua!* 💧\nI'm ${f.name} (${f.phone}).\nService: ${f.service}\nBottle size: ${f.size}\nQuantity: ~${f.qty}\n${f.message ? `Message: ${f.message}` : ''}`)
   }
   return (
     <section id="contact" className="bg-gradient-to-b from-navy to-midnight py-20 text-white"><div className="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-2">

@@ -12,7 +12,7 @@ const chip = (on: boolean) => `min-h-11 rounded-xl border px-4 text-sm font-medi
 export default function BottleCustomizer({ c }: { c: Customization; snap?: Snap  }) {
   const file = useRef<HTMLInputElement>(null), snap: Snap = useRef(null)
   const [busy, setBusy] = useState(false)
-  const msg  = `🙏 *Namaskaram Vayu Aqua!* 💧\nI'm interested in creating a *bespoke customised bottle.*\n📦 *BOTTLE SIZE:* ${SIZES.find(s => s.id === c.size)!.label}\n✨ I'd love to explore the customisation possibilities, available finishes, and pricing.\nCould you please share the details and guide me through the next steps?\nLooking forward to creating something unique with *Vayu Aqua!* 🤝`
+  const msg  = `🙏 *Namaskaram Vayu Aqua!* 💧\n\nI'm interested in creating a *bespoke customised bottle.*\n\n📦 *BOTTLE SIZE:* ${SIZES.find(s => s.id === c.size)!.label}\n\n✨ I'd love to explore the customisation possibilities, available finishes, and pricing.\n\nCould you please share the details and guide me through the next steps?\n\nLooking forward to creating something unique with *Vayu Aqua!* 🤝\n`
   const enquire = async () => {
     setBusy(true)
     const w = window.open('about:blank', '_blank') // opened inside the click so popup blockers allow itmsg
