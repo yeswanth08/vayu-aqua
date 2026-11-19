@@ -103,7 +103,7 @@ export function Contact({ c }: { c: Customization }) {
 export function Footer() {
   return (
     <footer className="bg-black py-12 text-sm text-slate-400"><div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 md:flex-row md:justify-between">
-      <div><div className="text-lg text-white"><Mark /></div><p className="mt-2">Pure Hydration. Premium Experience.</p><p className="mt-4 flex items-center gap-2"><MapPin size={14} />Visakhapatnam, Andhra Pradesh</p><p className="mt-1"><Package className="mr-2 inline" size={14} />{PHONES.join(' · ')}</p></div>
+      <div><div className="text-lg text-white"><Mark /></div><p className="mt-2">Pure Hydration With Premium Experience.</p><p className="mt-4 flex items-center gap-2"><MapPin size={14} />Visakhapatnam, Andhra Pradesh</p><p className="mt-1"><Package className="mr-2 inline" size={14} />{PHONES.join(' · ')}</p></div>
       <nav className="flex flex-wrap gap-x-6 gap-y-2">{LINKS.map(([t, h]) => <a key={h} href={h} className="hover:text-cyan">{t}</a>)}</nav>
     </div><p className="mt-8 text-center text-xs">© {new Date().getFullYear()} VAYU AQUA. All rights reserved.</p></footer>
   )

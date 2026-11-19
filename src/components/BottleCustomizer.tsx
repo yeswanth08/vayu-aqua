@@ -1,24 +1,39 @@
-import { lazy, Suspense, useRef } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { CATEGORIES } from '../utils/labelTexture'
 import { SIZES, type Customization } from '../hooks/useBottleCustomization'
-import { openWhatsApp } from '../utils/whatsapp'
-import { imageToFile } from '../utils/helper'
+import { waLink } from '../utils/whatsapp'
+import { uploadImage } from '../utils/uploadImage'
+import { type Snap } from './Capture'
 import { Reveal } from './Sections'
 const Bottle3D = lazy(() => import('./Bottle3D'))
 const chip = (on: boolean) => `min-h-11 rounded-xl border px-4 text-sm font-medium transition ${on ? 'border-aqua bg-aqua text-white' : 'border-slate-300 bg-white text-navy hover:border-aqua'}`
 
-export default function BottleCustomizer({ c }: { c: Customization }) {
-  const file = useRef<HTMLInputElement>(null)
-  const design = c.image ? `Uploaded artwork (${c.fileName})` : CATEGORIES.find(d => d.id === c.category)!.name
-  const enquire = () => openWhatsApp(`Hello Vayu Aqua, I'd like to enquire about a customised bottle.\nSize: ${SIZES.find(s => s.id === c.size)!.label}\nDesign: ${design}\n${c.fileName ? `Image: ${c.fileName} (I will share it here)\n` : ''}Please share pricing and next steps.`)
+export default function BottleCustomizer({ c }: { c: Customization; snap?: Snap  }) {
+  const file = useRef<HTMLInputElement>(null), snap: Snap = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const msg  = `🙏 *Namaskaram Vayu Aqua!* 💧\nI'm interested in creating a *bespoke customised bottle.*\n📦 *BOTTLE SIZE:* ${SIZES.find(s => s.id === c.size)!.label}\n✨ I'd love to explore the customisation possibilities, available finishes, and pricing.\nCould you please share the details and guide me through the next steps?\nLooking forward to creating something unique with *Vayu Aqua!* 🤝`
+  const enquire = async () => {
+    setBusy(true)
+    const w = window.open('about:blank', '_blank') // opened inside the click so popup blockers allow itmsg
+    let url: string | null = null
+    try {
+      const shot = snap.current?.()
+      // upload the bottle preview, but never wait more than 6s: the enquiry must always go out
+      if (shot) url = await Promise.race([uploadImage(shot, shot.name), new Promise<null>(r => setTimeout(() => r(null), 6000))])
+    } catch { /* send the enquiry without a preview link */ }
+    const link = waLink(msg + (url ? `\nBottle preview: ${url}` : ''))
+    if (w) w.location.href = link; else window.location.href = link
+    setBusy(false)
+  }
+
   return (
     <section id="customise" className="bg-ice py-20 text-navy">
       <div className="mx-auto max-w-7xl px-5">
         <Reveal><h2 className="font-display text-3xl font-bold sm:text-4xl">Imagine It. Customise It. Make It Yours.</h2>
-          <p className="mt-3 max-w-2xl text-slate-600">Pick a size, choose a design or upload your own artwork — the 3D bottle updates instantly. Your image stays in your browser.</p></Reveal>
+          <p className="mt-3 max-w-2xl text-slate-600">Pick a size, choose a design or upload your own artwork — the 3D bottle updates instantly. Your artwork stays in your browser until you send an enquiry.</p></Reveal>
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
-          <div className="h-[460px] rounded-3xl bg-gradient-to-b from-navy to-midnight shadow-2xl lg:h-[600px]"><Suspense fallback={null}><Bottle3D c={c} /></Suspense></div>
+          <div className="h-[460px] rounded-3xl bg-gradient-to-b from-navy to-midnight shadow-2xl lg:h-[600px]"><Suspense fallback={null}><Bottle3D c={c} snap={snap} /></Suspense></div>
           <div className="space-y-7">
             <div><h3 className="mb-3 font-semibold">Bottle size</h3><div className="flex flex-wrap gap-2">{SIZES.map(s => <button key={s.id} onClick={() => c.setSize(s.id)} className={chip(c.size === s.id)}>{s.label}</button>)}</div></div>
             <div><h3 className="mb-3 font-semibold">Design</h3><div className="flex flex-wrap gap-2">{CATEGORIES.map(d => <button key={d.id} onClick={() => c.pickCategory(d.id)} className={chip(c.category === d.id && !c.image)}>{d.name}</button>)}</div></div>
@@ -32,7 +47,8 @@ export default function BottleCustomizer({ c }: { c: Customization }) {
                   <div className="mt-1 flex gap-2">{(['contain', 'cover'] as const).map(f => <button key={f} onClick={() => c.setFit(f)} className={`rounded-lg px-3 py-1.5 text-xs ${c.fit === f ? 'bg-navy text-white' : 'bg-ice'}`}>{f === 'contain' ? 'Fit whole image' : 'Fill label'}</button>)}</div></div>
                 <button onClick={c.clear} aria-label="Remove image" className="grid size-11 place-items-center rounded-full hover:bg-ice"><X size={18} /></button></div>}
             </div>
-            <button onClick={enquire} className="w-full rounded-full bg-navy py-4 font-semibold text-white shadow-lg transition hover:bg-aqua">Enquire About This Design</button>
+            <button onClick={enquire} disabled={busy} className="w-full rounded-full bg-navy py-4 font-semibold text-white shadow-lg transition hover:bg-aqua disabled:opacity-60">{busy ? 'Opening WhatsApp…' : 'Enquire About This Design'}</button>
+            <p className="text-xs text-slate-500">When you enquire, a preview picture of your bottle is uploaded so we can see your design.</p>
           </div>
         </div>
       </div>

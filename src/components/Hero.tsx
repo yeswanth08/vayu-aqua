@@ -11,7 +11,7 @@ export default function Hero({ c }: { c: Customization }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_45%,rgba(34,224,255,.22),transparent_60%)]" />
       <div className="relative mx-auto grid max-w-7xl items-center gap-4 px-5 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-2">
         <motion.div className="order-2 pb-16 lg:order-1" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .8 }}>
-          <p className="mb-4 text-xs font-semibold tracking-[.3em] text-cyan">PURE HYDRATION. PREMIUM EXPERIENCE.</p>
+          <p className="mb-4 text-xs font-semibold tracking-[.3em] text-cyan">PURE HYDRATION With PREMIUM EXPERIENCE.</p>
           <h1 className="font-display text-4xl font-bold leading-[1.08] sm:text-5xl xl:text-6xl">Your Brand. Your Bottle. <span className="bg-gradient-to-r from-aqua to-cyan bg-clip-text text-transparent">Your Experience.</span></h1>
           <p className="mt-5 max-w-lg text-lg text-slate-300">Turn ordinary water bottles into something memorable. Personalised water bottles for businesses, celebrations, and every special occasion.</p>
           <div className="mt-8 flex flex-wrap gap-3">

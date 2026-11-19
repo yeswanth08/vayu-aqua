@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { RotateCcw } from 'lucide-react'
 import { drawLabel } from '../utils/labelTexture'
 import type { Customization, Size } from '../hooks/useBottleCustomization'
+import Capture, { type Snap } from './Capture'
 
 type P = [number, number]
 const v2 = (p: P[]) => p.map(([x, y]) => new THREE.Vector2(x, y))
@@ -187,7 +188,7 @@ function Bottle({ c, fonts, hq, intro }: { c: Customization; fonts: number; hq: 
   )
 }
 
-export default function Bottle3D({ c }: { c: Customization }) {
+export default function Bottle3D({ c, snap }: { c: Customization; snap?: Snap }) {
   const wrap = useRef<HTMLDivElement>(null), ctl = useRef<any>(null), idle = useRef<number | undefined>(undefined)
   const [vis, setVis] = useState(true), [fonts, setFonts] = useState(0)
   const ok = useMemo(hasWebGL, [])
@@ -214,6 +215,7 @@ export default function Bottle3D({ c }: { c: Customization }) {
             <Lightformer form="rect" intensity={.6} color="#0a3a7a" position={[0, -5, 0]} scale={[10, 10, 1]} target={[0, 0, 0]} />
           </Environment>
           <Bottle c={c} fonts={fonts} hq={hq} intro={!still} />
+          {snap && <Capture snap={snap} />}
           <OrbitControls ref={ctl} makeDefault enablePan={false} enableDamping rotateSpeed={.8} minDistance={7} maxDistance={16} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 1.7} autoRotate={auto} autoRotateSpeed={1.4}
             onStart={() => { clearTimeout(idle.current); setAuto(false) }}
             onEnd={() => { idle.current = window.setTimeout(() => setAuto(!still), 2500) }} />
