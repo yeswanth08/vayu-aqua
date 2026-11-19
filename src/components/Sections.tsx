@@ -78,7 +78,7 @@ export function Contact({ c }: { c: Customization }) {
       <Reveal><h2 className="font-display text-3xl font-bold sm:text-4xl">Let's Create Something Unique.</h2>
         <p className="mt-3 text-slate-300">Have a design in mind? Let's turn it into a personalised water bottle.</p>
         <ul className="mt-8 space-y-4">
-          <li className="flex items-center gap-3"><Phone className="text-cyan" /><span>Ajay · {PHONES.map((p, i) => <a key={p} href={`tel:+91${p}`} className="ml-2 underline-offset-4 hover:underline">{i ? '/ ' : ''}{p}</a>)}</span></li>
+          <li className="flex items-center gap-3"><Phone className="text-cyan" /><span>Ajay · Narendra -{PHONES.map((p, i) => <a key={p} href={`tel:+91${p}`} className="ml-2 underline-offset-4 hover:underline">{i ? '/ ' : ''}{p}</a>)}</span></li>
           <li className="flex items-center gap-3"><MapPin className="text-cyan" />Sujatha Nagar, Visakhapatnam, Andhra Pradesh</li></ul>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href={`tel:+91${PHONES[0]}`} className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/25 px-6 font-semibold hover:bg-white/10"><Phone size={18} />Call Now</a>
@@ -92,7 +92,9 @@ export function Contact({ c }: { c: Customization }) {
           <div><input name="qty" type="number" min="1" placeholder="Est. quantity" className={inp} />{err.qty && <p className="mt-1 text-sm text-red-400">{err.qty}</p>}</div></div>
         <textarea name="message" rows={3} placeholder="Message" className={inp} />
         <button className="w-full rounded-full bg-gradient-to-r from-aqua to-cyan py-3.5 font-semibold text-midnight">Send Enquiry on WhatsApp</button>
-        <p className="text-xs text-slate-400">This opens WhatsApp with your message prefilled. Nothing is stored on a server.</p>
+        <center>
+        <p className="text-xs text-slate-400">*This opens WhatsApp with your message prefilled. </p>
+        </center>
       </form>
     </div></section>
   )

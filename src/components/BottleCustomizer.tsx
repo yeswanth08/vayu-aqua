@@ -3,6 +3,7 @@ import { Upload, X } from 'lucide-react'
 import { CATEGORIES } from '../utils/labelTexture'
 import { SIZES, type Customization } from '../hooks/useBottleCustomization'
 import { openWhatsApp } from '../utils/whatsapp'
+import { imageToFile } from '../utils/helper'
 import { Reveal } from './Sections'
 const Bottle3D = lazy(() => import('./Bottle3D'))
 const chip = (on: boolean) => `min-h-11 rounded-xl border px-4 text-sm font-medium transition ${on ? 'border-aqua bg-aqua text-white' : 'border-slate-300 bg-white text-navy hover:border-aqua'}`
@@ -10,7 +11,7 @@ const chip = (on: boolean) => `min-h-11 rounded-xl border px-4 text-sm font-medi
 export default function BottleCustomizer({ c }: { c: Customization }) {
   const file = useRef<HTMLInputElement>(null)
   const design = c.image ? `Uploaded artwork (${c.fileName})` : CATEGORIES.find(d => d.id === c.category)!.name
-  const enquire = () => openWhatsApp(`Hello VAYU AQUA, I'd like to enquire about a customised bottle.\nSize: ${SIZES.find(s => s.id === c.size)!.label}\nDesign: ${design}\n${c.fileName ? `Image: ${c.fileName} (I will share it here)\n` : ''}Please share pricing and next steps.`)
+  const enquire = () => openWhatsApp(`Hello Vayu Aqua, I'd like to enquire about a customised bottle.\nSize: ${SIZES.find(s => s.id === c.size)!.label}\nDesign: ${design}\n${c.fileName ? `Image: ${c.fileName} (I will share it here)\n` : ''}Please share pricing and next steps.`)
   return (
     <section id="customise" className="bg-ice py-20 text-navy">
       <div className="mx-auto max-w-7xl px-5">

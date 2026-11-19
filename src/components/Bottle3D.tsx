@@ -6,21 +6,56 @@ import { RotateCcw } from 'lucide-react'
 import { drawLabel } from '../utils/labelTexture'
 import type { Customization, Size } from '../hooks/useBottleCustomization'
 
-const DIM: Record<Size, { R: number; H: number }> = { '200': { R: .8, H: .9 }, '500': { R: .9, H: 1.6 }, '1000': { R: 1, H: 2.2 } }
 type P = [number, number]
 const v2 = (p: P[]) => p.map(([x, y]) => new THREE.Vector2(x, y))
 const hasWebGL = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false } }
 
-// PET bottle profile (radius, height): punted base, grip grooves, straight label zone, shoulder, neck.
-function shape(R: number, H: number) {
-  const w = .8 * R, lb = .5 + .1 * H, lt = .5 + .9 * H, S = lt + .3
-  const groove = (y: number): P[] => [[w, y], [w * .93, y + .06], [w, y + .12]]
-  const pts: P[] = [[0, .14], [.3 * R, .12], [.5 * R, .03], [.62 * R, 0], [.72 * R, .03], [.78 * R, .14], [w, .3],
-    ...groove(lb - .22), [w, lb], [w, lt], ...groove(lt + .06), [w, S],
-    [.76 * R, S + .18], [.6 * R, S + .5], [.42 * R, S + .8], [.35, S + 1], [.34, S + 1.1], [.34, S + 1.3]]
-  return { pts, w, lb, lt, S, top: S + 1.3 }
+// The client's bottle: straight body, round dome shoulder, short neck, black ribbed cap, dimpled base.
+// Neck + cap are identical on every size (like real bottles); only body radius/length change.
+const SZ: Record<Size, { r: number; L: number }> = {
+  '200': { r: 0.60, L: 2 },
+  '500': { r: 0.78, L: 3 },
+  '1000': { r: 0.88, L: 3.8 }
 }
-// Radial ridges (cap knurling) between heights y0..y1.
+// const SZ: Record<Size, { r: number; L: number }> = { '200': { r: .72, L: 1.7 }, '500': { r: .84, L: 2.8 }, '1000': { r: .96, L: 3.9 } }
+// const NECK = .30, ARC = Math.PI * .80, FIT = .8 // label arc (108°), global display scale
+const NECK = 0.3; // Slightly slimmer neck to match the tall, narrow cap silhouette
+const ARC = Math.PI * 0.65, FIT = 1;
+
+function shape(r: number, L: number) {
+  const yS = .32 + L // top of straight body
+    const pts: P[] = [
+    [0, 0.10],
+    [0.12 * r, 0.055],
+    [0.35 * r, 0.025],
+    [0.65 * r, 0.015],
+    [0.85 * r, 0.025],
+    [0.94 * r, 0.07],
+    [0.985 * r, 0.16],
+    [r, 0.32],
+    [r, yS]
+  ]
+  // const pts: P[] = [[0, .1], [.1, .06], [.35 * r, .04], [.62 * r, 0], [.8 * r, 0], [.92 * r, .05], [.98 * r, .15], [r, .32], [r, yS]]
+  const a1 = Math.acos(NECK / r), sh = 1.3 * r
+
+    for (let i = 1; i <= 32; i++) {
+      const a = a1 * i / 32
+
+      pts.push([
+        r * Math.cos(a),
+        yS + sh * Math.sin(a)
+      ])
+    }
+
+    const yTop = yS + sh * Math.sin(a1)
+    const nk = yTop + 0.12
+
+    // Continuous narrow neck
+    pts.push(
+      [NECK, nk + 0.1]
+    )
+  return { pts, yS, yTop, nk, total: nk + .5 }
+}
 function ridged(g: THREE.BufferGeometry, y0: number, y1: number, n: number, amp: number) {
   const p = g.attributes.position
   for (let i = 0; i < p.count; i++) {
@@ -29,38 +64,124 @@ function ridged(g: THREE.BufferGeometry, y0: number, y1: number, n: number, amp:
   }
   g.computeVertexNormals(); return g
 }
+const CLEAR = { color: '#eaf7ff', transparent: true, roughness: .03, clearcoat: 1, clearcoatRoughness: .03, envMapIntensity: 1.7, depthWrite: false } as const
 
-function Bottle({ c, fonts, hq }: { c: Customization; fonts: number; hq: boolean }) {
-  const { R, H } = DIM[c.size]
-  const { pts, w, lb, lt, S, top } = useMemo(() => shape(R, H), [R, H])
-  const total = top + .1, seg = hq ? 96 : 64
-  const outer = useMemo(() => new THREE.LatheGeometry(v2(pts), seg), [pts, seg])
-  const water = useMemo(() => new THREE.LatheGeometry(v2([...pts.filter(p => p[1] <= S + .8).map(([x, y]): P => [x * .965, y + .01]), [0, S + .8]]), seg), [pts, S, seg])
-  const cap = useMemo(() => ridged(new THREE.LatheGeometry(v2([[.43, 0], [.41, .05], [.41, .34], [.38, .4], [0, .4]]), 144), .06, .33, 36, .014), [])
-  const tex = useMemo(() => { const t = new THREE.CanvasTexture(drawLabel(c.category, c.image, c.fit)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t }, [c.category, c.image, c.fit, fonts])
+function Bottle({ c, fonts, hq, intro }: { c: Customization; fonts: number; hq: boolean; intro: boolean }) {
+  const { r, L } = SZ[c.size]
+  const m = useMemo(() => shape(r, L), [r, L])
+  const seg = hq ? 128 : 96
+
+  const lb = 0.35
+  const lt = m.yS
+  const lh = lt - lb
+
+  // Slightly narrower label wrapping
+  const labelArc = ARC * 0.94
+
+  // Match label texture to physical dimensions
+  const aspect = (r * labelArc) / lh
+
+  // Keep label very close to the bottle surface
+  const labelRadius = r + 0.003
+  // const seg = hq ? 160 : 96, lb = .55, lt = m.yS - .1, lh = lt - lb, aspect = (r * ARC) / lh
+  const outer = useMemo(() => new THREE.LatheGeometry(v2(m.pts), seg), [m, seg])
+  const water = useMemo(() => new THREE.LatheGeometry(v2([...m.pts.filter(p => p[1] <= m.yTop).map(([x, y]): P => [x * .965, y + .01]), [NECK * .965, m.nk - .1], [0, m.nk - .1]]), seg), [m, seg])
+  const cap = useMemo(() =>
+    ridged(
+      new THREE.LatheGeometry(
+        v2([
+          [0.31, 0],
+          [0.305, 0.035],
+          [0.305, 0.30],
+          [0.29, 0.36],
+          [0, 0.36]
+        ]),
+        144
+      ),
+      0.06,
+      0.29,
+      36,
+      0.008
+    ),
+    []
+  )
+  // const cap = useMemo(() => ridged(new THREE.LatheGeometry(v2([[.43, 0], [.41, .05], [.41, .34], [.38, .4], [0, .4]]), 144), .06, .33, 36, .014), [])
+  const tex = useMemo(() => { const t = new THREE.CanvasTexture(drawLabel(c.category, c.image, c.fit, aspect)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t }, [c.category, c.image, c.fit, aspect, fonts])
   useEffect(() => () => tex.dispose(), [tex])
   useEffect(() => () => { outer.dispose(); water.dispose() }, [outer, water])
   useEffect(() => () => cap.dispose(), [cap])
 
-  const g = useRef<THREE.Group>(null), k = useRef(.9)
-  useEffect(() => { k.current = .93 }, [c.size]) // small "pop" when the size changes
-  useFrame((_, dt) => { k.current += (1 - k.current) * Math.min(1, dt * 6); g.current?.scale.setScalar(k.current) })
+  const g = useRef<THREE.Group>(null), k = useRef(.93), t0 = useRef(intro ? 0 : 1)
+  useEffect(() => { k.current = .93 }, [c.size]) // small "pop" on size change
+  useFrame((_, dt) => {
+    k.current += (1 - k.current) * Math.min(1, dt * 6)
+    t0.current = Math.min(1, t0.current + dt / 1.6)
+    const e = 1 - Math.pow(1 - t0.current, 3) // intro: spin in + rise
+    if (g.current) { g.current.rotation.y = -(1 - e) * Math.PI * 1.2; g.current.scale.setScalar(FIT * k.current * (.85 + .15 * e)) }
+  })
 
-  const labelH = lt - lb, labelY = (lb + lt) / 2
+  // const labelGeo = <cylinderGeometry args={[r + .012, r + .012, lh, 64, 1, true, -ARC / 2, ARC]} />
+  const labelGeo = (
+  <cylinderGeometry
+    args={[
+      labelRadius,
+      labelRadius,
+      lh,
+      128,
+      1,
+      true,
+      -labelArc / 2,
+      labelArc
+    ]}
+  />
+)
   return (
-    <group position={[0, -total / 2, 0]}>
-      <ContactShadows position={[0, .005, 0]} opacity={.4} blur={3} scale={8} far={total + 1} resolution={512} color="#00122e" />
+    <group position={[0, -m.total * FIT / 2, 0]}>
+      <ContactShadows position={[0, .005, 0]} opacity={.4} blur={3} scale={8} far={m.total + 1} resolution={512} color="#00122e" />
       <group ref={g}>
-        {/* water, then plastic wall on top so reflections sit over the water */}
-        <mesh geometry={water} renderOrder={1}><meshPhysicalMaterial color="#8fdcff" transparent opacity={.3} roughness={.02} clearcoat={1} envMapIntensity={1.3} depthWrite={false} /></mesh>
-        <mesh geometry={outer} renderOrder={2}><meshPhysicalMaterial color="#eaf7ff" transparent opacity={.14} roughness={.03} clearcoat={1} clearcoatRoughness={.03} ior={1.45} envMapIntensity={1.7} side={THREE.DoubleSide} depthWrite={false} /></mesh>
-        {/* label: artwork on the outside, ivory paper on the inside (seen through the bottle) */}
-        <mesh position={[0, labelY, 0]} rotation={[0, Math.PI, 0]}><cylinderGeometry args={[w + .012, w + .012, labelH, 96, 1, true]} /><meshPhysicalMaterial map={tex} roughness={.55} clearcoat={.25} /></mesh>
-        <mesh position={[0, labelY, 0]} rotation={[0, Math.PI, 0]}><cylinderGeometry args={[w + .012, w + .012, labelH, 96, 1, true]} /><meshStandardMaterial color="#f3efe6" roughness={.85} side={THREE.BackSide} /></mesh>
-        {/* neck finish: support ring, tamper ring, knurled cap */}
-        <mesh position={[0, top - .46, 0]}><cylinderGeometry args={[.44, .44, .04, 48]} /><meshPhysicalMaterial color="#f2f9ff" roughness={.25} clearcoat={.6} /></mesh>
-        <mesh position={[0, top - .36, 0]}><cylinderGeometry args={[.39, .39, .07, 48]} /><meshPhysicalMaterial color="#f7fbff" roughness={.4} /></mesh>
-        <mesh geometry={cap} position={[0, top - .3, 0]}><meshPhysicalMaterial color="#f7fbff" roughness={.35} clearcoat={.35} clearcoatRoughness={.25} /></mesh>
+        <mesh geometry={water} renderOrder={1}><meshPhysicalMaterial color="#8fdcff" transparent opacity={.28} roughness={.02} clearcoat={1} envMapIntensity={1.3} depthWrite={false} /></mesh>
+        <mesh geometry={outer} renderOrder={2}><meshPhysicalMaterial {...CLEAR} opacity={.14} ior={1.45} side={THREE.DoubleSide} /></mesh>
+        {/* front label (customer design only); ivory paper on the inside */}
+        <mesh
+          position={[0, (lb + lt) / 2, 0]}
+          renderOrder={3}
+        >
+          {labelGeo}
+          <meshPhysicalMaterial
+            map={tex}
+            roughness={0.65}
+            clearcoat={0.1}
+            side={THREE.FrontSide}
+            polygonOffset
+            polygonOffsetFactor={-1}
+          />
+        </mesh>
+        {/* <mesh position={[0, (lb + lt) / 2, 0]}>{labelGeo}<meshPhysicalMaterial map={tex} roughness={.55} clearcoat={.25} /></mesh> */}
+        <mesh position={[0, (lb + lt) / 2, 0]}>{labelGeo}<meshStandardMaterial color="#f3efe6" roughness={.85} side={THREE.BackSide} /></mesh>
+        {/* neck finish: clear support ring + black ribbed cap */}
+        <mesh position={[0, m.nk, 0]} renderOrder={2}>
+        <cylinderGeometry args={[0.2, 0.38, 0.01, 20]} />
+        <meshPhysicalMaterial
+          color="#e9ecee"
+          transparent
+          opacity={0.22}
+          roughness={0.08}
+          clearcoat={1}
+        />
+      </mesh>
+        {/* <mesh position={[0, m.nk, 0]} renderOrder={2}><cylinderGeometry args={[.46, .46, .05, 48]} /><meshPhysicalMaterial {...CLEAR} opacity={.35} /></mesh> */}
+        <mesh
+          geometry={cap}
+          position={[0, m.nk + 0.06, 0]}
+        >
+          <meshPhysicalMaterial
+            color="#564b4b"
+            roughness={0.35}
+            clearcoat={0.5}
+            clearcoatRoughness={0.3}
+          />
+        </mesh>
+        {/* <mesh geometry={cap} position={[0, m.nk + .06, 0]}><meshPhysicalMaterial color="#0b0d12" roughness={.3} clearcoat={.6} clearcoatRoughness={.2} /></mesh> */}
       </group>
     </group>
   )
@@ -84,7 +205,6 @@ export default function Bottle3D({ c }: { c: Customization }) {
           <ambientLight intensity={.25} />
           <directionalLight position={[4, 6, 5]} intensity={.9} />
           <spotLight position={[0, 4, -6]} angle={.5} penumbra={1} intensity={60} color="#22e0ff" />
-          {/* studio softboxes: tall side strips give the long highlights seen on real product shots */}
           <Environment resolution={512} frames={1}>
             <Lightformer form="rect" intensity={6} color="#ffffff" position={[-5, 0, 3]} scale={[1.2, 9, 1]} target={[0, 0, 0]} />
             <Lightformer form="rect" intensity={6} color="#ffffff" position={[5, 0, 3]} scale={[1.2, 9, 1]} target={[0, 0, 0]} />
@@ -93,7 +213,7 @@ export default function Bottle3D({ c }: { c: Customization }) {
             <Lightformer form="rect" intensity={3} color="#22e0ff" position={[0, -1, -6]} scale={[10, 6, 1]} target={[0, 0, 0]} />
             <Lightformer form="rect" intensity={.6} color="#0a3a7a" position={[0, -5, 0]} scale={[10, 10, 1]} target={[0, 0, 0]} />
           </Environment>
-          <Bottle c={c} fonts={fonts} hq={hq} />
+          <Bottle c={c} fonts={fonts} hq={hq} intro={!still} />
           <OrbitControls ref={ctl} makeDefault enablePan={false} enableDamping rotateSpeed={.8} minDistance={7} maxDistance={16} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 1.7} autoRotate={auto} autoRotateSpeed={1.4}
             onStart={() => { clearTimeout(idle.current); setAuto(false) }}
             onEnd={() => { idle.current = window.setTimeout(() => setAuto(!still), 2500) }} />
